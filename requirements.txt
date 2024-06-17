@@ -4,3 +4,4 @@ streamlit==1.15.1
 matplotlib==3.6.3
 yfinance==0.2.12
 lxml==4.9.1
+numpy==1.23.5
