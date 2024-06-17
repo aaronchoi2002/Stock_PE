@@ -13,7 +13,7 @@ st.title('Historical PE Ratio Calculator')
 
 # User input for stock ticker
 ticker = st.text_input("Enter a stock ticker:", "AAPL")
-period = st.number_input("Number of year PE record:", 5)
+period = st.number_input("Number of year PE record:", 1)
 
 # Map to sector 
 sector_mapping = {
