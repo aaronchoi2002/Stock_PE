@@ -159,7 +159,7 @@ if st.button('Fetch Data'):
                 st.write(f"**Earnings Yield:** {Earnings_Yield}*")
 
             # Add an expander to hide additional financial details
-            with st.expander("Show Additional Financial Details"):
+            with st.expander(f"Show Additional Financial Details ({from_currency})"):
                 col1, col2 = st.columns(2)
                 with col1:
                     st.write(f"**EBIT (Quarter):** {EBIT}")
