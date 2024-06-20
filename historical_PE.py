@@ -158,6 +158,21 @@ if st.button('Fetch Data'):
                 st.write(f"**Last TTM EPS:** {last_ttm_eps:.2f}")
                 st.write(f"**Earnings Yield:** {Earnings_Yield}*")
 
+            # Add an expander to hide additional financial details
+            with st.expander("Show Additional Financial Details"):
+                col1, col2 = st.columns(2)
+                with col1:
+                    st.write(f"**EBIT (Quarter):** {EBIT}")
+                    st.write(f"**Annual EBIT:** {Annual_EBIT}")
+                    st.write(f"**Total Non-Current Liabilities:** {Total_Non_Current_Liabilities}")
+                with col2:
+                    st.write(f"**Stockholders Equity:** {Stockholders_Equity}")
+                    st.write(f"**Market Cap:** {Market_Cap}")
+                    st.write(f"**Cash Equivalents:** {Cash_Equivalents}")
+                    st.write(f"**Total Debt:** {Total_Debt}")
+
+
+            
             # Plot the PE Ratio and median line using matplotlib
             plt.figure(figsize=(10, 6))
             plt.plot(merged_df['date'], merged_df['PE Ratio'], linestyle='-', label='PE Ratio')
