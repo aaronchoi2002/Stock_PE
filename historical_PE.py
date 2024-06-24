@@ -16,7 +16,7 @@ st.title('Historical PE Ratio Calculator')
 # User input for stock ticker
 ticker = st.text_input("Enter a stock ticker:", "AAPL")
 period = st.number_input("Number of year PE record:", 5)
-
+last_currency = 1
 # Process fx data
 def process_fx_data(fx_df):
     data = []
@@ -49,17 +49,27 @@ if st.button('Fetch Data'):
     # Define the API endpoints for historical price and quarterly EPS
     price_url = f"https://financialmodelingprep.com/api/v3/historical-price-full/{ticker}?apikey={api_key}"
     eps_url = f"https://financialmodelingprep.com/api/v3/income-statement/{ticker}?period=quarter&limit=160&apikey={api_key}"
+    balance_sheet_url = f"https://financialmodelingprep.com/api/v3/balance-sheet-statement/{ticker}?period=quarter&apikey={api_key}"
     profile_url = f"https://financialmodelingprep.com/api/v3/profile/{ticker}?apikey={api_key}"
 
     # Send requests to the API
     price_response = requests.get(price_url)
     eps_response = requests.get(eps_url)
     profile_response = requests.get(profile_url)
+    balance_sheet_response = requests.get(balance_sheet_url)
+
+
+
+
+
+
+
 
     # Check if the requests were successful
     if price_response.status_code == 200 and eps_response.status_code == 200:
         price_data = price_response.json()
         eps_data = eps_response.json()
+        balance_sheet_data = balance_sheet_response.json()
         
         # Check if the necessary data is present
         if not price_data or 'historical' not in price_data:
@@ -77,8 +87,13 @@ if st.button('Fetch Data'):
             # Load the EPS data into a DataFrame
             eps_df = pd.DataFrame(eps_data)
             eps_df['date'] = pd.to_datetime(eps_df['date'])
-            eps_df = eps_df.loc[:, ['date', 'epsdiluted', 'reportedCurrency']]
+            eps_df = eps_df.loc[:, ['date', 'epsdiluted', 'reportedCurrency', 'weightedAverageShsOutDil']]
             eps_df = eps_df.sort_values(by='date')
+            share_outstanding = eps_df.iloc[-1]['weightedAverageShsOutDil']
+
+
+            
+
 
             # Load the fx data into a DataFrame
             from_currency = eps_df['reportedCurrency'].iloc[0]
@@ -90,6 +105,7 @@ if st.button('Fetch Data'):
                 fx_df = process_fx_data(fx_df)
                 fx_df['date'] = pd.to_datetime(fx_df['date'])  # Convert date to datetime format
                 fx_df = fx_df.sort_values('date')
+                last_currency = fx_df.iloc[-1]['open']
                 merged_fx_price = pd.merge_asof(price_df.sort_values('date'), fx_df[['date', 'open']], on='date', direction='forward')
                 st.text(f"**Original Currency:** {from_currency} following data is converted to USD")
                 st.markdown(
@@ -102,6 +118,11 @@ if st.button('Fetch Data'):
             else:
                 merged_fx_price = price_df
                 merged_fx_price["open"] = 1
+
+            # Load the balance sheet data into a DataFrame
+            balance_sheet_df = pd.DataFrame(balance_sheet_data)
+            long_term_debt = balance_sheet_df.iloc[0]['longTermDebt'] * last_currency
+            Cash_short_term_investment = balance_sheet_df.iloc[0]['cashAndShortTermInvestments'] * last_currency
 
             # Calculate the TTM EPS by summing the latest 4 quarters
             eps_df['ttm_eps'] = eps_df['epsdiluted'].rolling(window=4).sum()
@@ -138,41 +159,49 @@ if st.button('Fetch Data'):
             financial_data = fetch_financial_data(ticker)
             ROCE = f"{financial_data['ROCE'] * 100:.2f}%"
             Earnings_Yield = f"{financial_data['Earnings Yield'] * 100:.2f}%"
+
             EBIT = f"{financial_data['EBIT']:,}"
-            Annual_EBIT = f"{financial_data['Annual EBIT']:,}"
-            Total_Non_Current_Liabilities = f"{financial_data['Total Non-Current Liabilities']:,}"
-            Stockholders_Equity = f"{financial_data['Stockholders Equity']:,}"
-            Market_Cap = f"{financial_data['Market Cap']:,}"
-            Cash_Equivalents = f"{financial_data['Cash Equivalents']:,}"
-            Total_Debt = f"{financial_data['Total Debt']:,}"
+            Annual_EBIT = f"{int(financial_data['Annual EBIT'] * last_currency):,}"
+            Total_Non_Current_Liabilities = f"{int(financial_data['Total Non-Current Liabilities'] * last_currency):,}" 
+            Stockholders_Equity = f"{int(financial_data['Stockholders Equity'] * last_currency):,}"
+            Market_Cap = f"{int(financial_data['Market Cap'] * last_currency):,}" 
+            Cash_Equivalents = f"{int(financial_data['Cash Equivalents'] * last_currency):,}" 
+            Total_Debt = f"{int(financial_data['Total Debt'] * last_currency):,}" 
+            liquidity_per_share = f"{(Cash_short_term_investment - long_term_debt)/share_outstanding:.2f}"
+
 
 
             # Display the last PE TTM value
-            col1, col2 = st.columns([1, 1])
+            col1, col2, col3 = st.columns([1, 1, 1])
             with col1:
-                st.write(f"**Sector:** {sector}")
+                st.write(f"**Stock Price**: {merged_df.iloc[-1]['close']:.2f}")
                 st.write(f"**Last PE:** {last_pe_ttm:.2f}")
                 st.write(f"**ROCE:** {ROCE}")
+                st.write(f"**Liquidity per share:** {liquidity_per_share}")
             with col2:
-                st.write(f"**Industry:** {industry}")
+                st.write(f"**Sector:** {sector}")
                 st.write(f"**Last TTM EPS:** {last_ttm_eps:.2f}")
-                st.write(f"**Earnings Yield:** {Earnings_Yield}*")
+                st.write(f"**Earnings Yield:** {Earnings_Yield}")
+            with col3:
+                st.write(f"**Industry:** {industry}")
+
 
             # Add an expander to hide additional financial details
             with st.expander(f"Show Additional Financial Details ({from_currency})"):
                 col1, col2 = st.columns(2)
                 with col1:
-                    st.write(f"**EBIT (Quarter):** {EBIT}")
                     st.write(f"**Annual EBIT:** {Annual_EBIT}")
                     st.write(f"**Total Non-Current Liabilities:** {Total_Non_Current_Liabilities}")
+                    st.write(f"**Cash Equivalents:** {Cash_Equivalents}")
+                    st.write(f"**Cash&INV:** {Cash_short_term_investment:,}")
+                    st.write(f"**Share Outstanding:** {share_outstanding:,}")
+
                 with col2:
                     st.write(f"**Stockholders Equity:** {Stockholders_Equity}")
                     st.write(f"**Market Cap:** {Market_Cap}")
-                    st.write(f"**Cash Equivalents:** {Cash_Equivalents}")
                     st.write(f"**Total Debt:** {Total_Debt}")
+                    st.write(f"**Long Term Debt:** {long_term_debt:,}")
 
-
-            
             # Plot the PE Ratio and median line using matplotlib
             plt.figure(figsize=(10, 6))
             plt.plot(merged_df['date'], merged_df['PE Ratio'], linestyle='-', label='PE Ratio')
@@ -215,6 +244,6 @@ if st.button('Fetch Data'):
                 st.write("Sector data not found in the table.")
 
             st.markdown('[Sector PE reference](https://worldperatio.com/sp-500-sectors)')
-            st.markdown('*Earning Yield is calculated as EBIT/EV and EBIT is using quarterly data x4 to annualize')
+
     else:
         st.error(f"Failed to fetch data: {price_response.status_code}, {eps_response.status_code}")
