@@ -26,6 +26,10 @@ def fetch_financial_data(ticker):
         # Calculate EBIT (Earnings Before Interest and Taxes)
         EBIT = income_df.iloc[0]['ebitda'] - income_df.iloc[0]['depreciationAndAmortization']
 
+        # Calculate TTM EBIT
+        TTM_EBIT = income_df.head(4)['ebitda'] - income_df.head(4)['depreciationAndAmortization']
+        TTM_EBIT = TTM_EBIT.sum()
+
         # Get the most recent cash and cash equivalents
         cash_equivalents = balance_sheet_df.iloc[0]['cashAndCashEquivalents']
 
@@ -43,7 +47,7 @@ def fetch_financial_data(ticker):
         ev = market_cap_value + total_debt - cash_equivalents
 
         # Assume annual EBIT by multiplying the latest quarter's EBIT by 4
-        annual_EBIT = EBIT * 4
+        annual_EBIT = TTM_EBIT 
         
         # annual_EBIT = ttm_eps
 
